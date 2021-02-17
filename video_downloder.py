@@ -14,7 +14,7 @@ import re
 import os
 
 
-class Bilibili_crawl:
+class BilibiliCrawl:
 
     def __init__(self, bv):
         # 视频页地址
@@ -163,7 +163,7 @@ class Bilibili_crawl:
 
 if __name__ == '__main__':
     bv = sys.argv[1]
-    bc = Bilibili_crawl(bv)
+    bc = BilibiliCrawl(bv)
     video = bc.get_video_info()
     audio = bc.get_audio_info()
     bc.download_video(video)
