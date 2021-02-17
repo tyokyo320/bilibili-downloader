@@ -95,7 +95,6 @@ class BilibiliCrawl:
         video_url = video['video_url']
         filename = title + '.mp4'
         print("开始下载视频：", filename)
-        sys.stdout.flush()
 
         # 当前目录作为下载目录
         currentVideoPath = os.path.join(sys.path[0], 'temp')
@@ -136,6 +135,7 @@ class BilibiliCrawl:
         s = ('#' * round(percent)).ljust(100, '-')
         sys.stdout.write("%.2f%%" % percent + '[ ' + s + ']' + '\r')
         sys.stdout.flush()
+        # print("%.2f%%" % percent + '[ ' + s + ']', end='\r', flush=True)
 
     def merge_video(self, video, audio):
         title = re.sub(r'[\/:*?"<>|]', '-', video['title'])
