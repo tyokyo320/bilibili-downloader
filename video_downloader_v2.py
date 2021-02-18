@@ -6,6 +6,7 @@ __author__ = 'tyokyo320'
 from bs4 import BeautifulSoup
 import moviepy.editor as mp
 import urllib.request
+import threading
 import requests
 import time
 import json
@@ -22,12 +23,12 @@ class BilibiliCrawler:
         # 下载开始时间
         self.start_time = time.time()
 
-    def get_video_page(self, bv):
-        url = f'https://www.bilibili.com/video/{bv}'
+    def get_video_page(self):
         response = requests.get(
-            url=url,
+            url=self.url,
             headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68',
+                'cookie': 'SESSDATA=d30d54a3%2C1629114942%2C9d55b*21'
             },
         )
 
@@ -50,9 +51,9 @@ class BilibiliCrawler:
 
             # 取第一个视频链接
             for item in temp['data']['dash']['video']:
-                # print(item)
                 if 'baseUrl' in item.keys():
                     video_url = item['baseUrl']
+                    print(item['id'])
                     break
 
             return {
@@ -164,9 +165,24 @@ if __name__ == '__main__':
     # argparse
     bv = sys.argv[1]
     bc = BilibiliCrawler(bv)
-    text = bc.get_video_page(bv)
+    text = bc.get_video_page()
     video = bc.get_video_info(text)
     audio = bc.get_audio_info(text)
-    bc.download_video(video)
-    bc.download_audio(audio)
+
+    # 创建线程池
+    threadpool = []
+
+    t1 = threading.Thread(target=bc.download_video, args=(video,))
+    threadpool.append(t1)
+
+    t2 = threading.Thread(target=bc.download_audio, args=(audio,))
+    threadpool.append(t2)
+
+    # 开始线程
+    for th in threadpool:
+        th.start()
+    # 等待所有线程运行完毕
+    for th in threadpool:
+        th.join()
+    
     bc.merge_video(video, audio)
