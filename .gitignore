@@ -1,3 +1,4 @@
 .vscode/*
 venv
 bilibili_video
+__pycache__/
