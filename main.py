@@ -1,6 +1,5 @@
 from models import bilibili
 from utils import download, merge
-
 import threading
 import time
 import sys
@@ -47,8 +46,8 @@ def main(bv):
     seconds = times
     print(f"总计用时：{minutes}分钟{seconds}秒")
 
+
 if __name__ == '__main__':
     # BV号
     bv = sys.argv[1]
     main(bv)
-    

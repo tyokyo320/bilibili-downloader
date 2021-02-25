@@ -31,4 +31,3 @@ class VideoMerge():
         os.remove(os.path.join(self.temp_path, video_filename))
         os.remove(os.path.join(self.temp_path, audio_filename))
         os.removedirs(self.temp_path)
-

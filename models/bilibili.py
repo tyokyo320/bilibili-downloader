@@ -1,6 +1,4 @@
 from bs4 import BeautifulSoup
-
-
 import config
 import requests
 import time
