@@ -48,6 +48,5 @@ def main(url):
 
 
 if __name__ == '__main__':
-    # URL
     url = sys.argv[1]
     main(url)
