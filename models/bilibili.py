@@ -9,9 +9,9 @@ import re
 class BilibiliInfo:
     '''获取视频和音频相关信息类'''
 
-    def __init__(self, bv):
+    def __init__(self, url):
         # 视频页地址
-        self.url = 'https://www.bilibili.com/video/' + bv
+        self.url = url
 
     def get_video_page(self):
         response = requests.get(

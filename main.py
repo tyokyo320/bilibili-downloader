@@ -5,13 +5,13 @@ import time
 import sys
 
 
-def main(bv):
+def main(url):
 
     # 开始下载时刻
     start_time = time.time()
 
     # 获取视频和音频相关信息
-    bi = bilibili.BilibiliInfo(bv)
+    bi = bilibili.BilibiliInfo(url)
     page_info = bi.get_video_page()
     video_info = bi.get_video_info(page_info)
     audio_info = bi.get_audio_info(page_info)
@@ -48,6 +48,6 @@ def main(bv):
 
 
 if __name__ == '__main__':
-    # BV号
-    bv = sys.argv[1]
-    main(bv)
+    # URL
+    url = sys.argv[1]
+    main(url)
