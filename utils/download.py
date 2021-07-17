@@ -3,6 +3,8 @@ import sys
 import os
 import re
 
+import config
+
 
 class BilibiliDownloader():
     '''下载视频和音频类'''
@@ -11,7 +13,7 @@ class BilibiliDownloader():
         self.video = video
         self.audio = audio
         # 存放下载视频的文件夹路径
-        self.temp_path = os.path.join(os.path.abspath('.'), 'temp')
+        self.temp_path = config.TEMP_PATH
 
     def download_video(self):
         title = re.sub(r'[\/:*?"<>|]', '-', self.video['title'])

@@ -2,6 +2,8 @@ import moviepy.editor as mp
 import os
 import re
 
+import config
+
 
 class VideoMerge():
     '''合并视频和音频类'''
@@ -10,9 +12,9 @@ class VideoMerge():
         self.video = video
         self.audio = audio
         # 存放下载视频的文件夹路径
-        self.temp_path = os.path.join(os.path.abspath('.'), 'temp')
+        self.temp_path = config.TEMP_PATH
         # 存放合并后的文件夹路径
-        self.path = os.path.join(os.path.abspath('.'), 'bilibili_video')
+        self.path = config.OUTPUT_PATH
 
     def merge_video(self):
         title = re.sub(r'[\/:*?"<>|]', '-', self.video['title'])
