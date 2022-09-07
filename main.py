@@ -1,42 +1,34 @@
-from models import bilibili
-from utils import download, merge
-import threading
 import time
-import sys
+
+from strategy.bilibili_executor import BilibiliExecutor
+from strategy.bilibili_executor import BilibiliDownloader
+from strategy.bilibili_executor import VideoMerge
 
 
-def main(url):
+class BFacade():
+
+    def __init__(self):
+        self.crawler = BilibiliExecutor()
+        self.downloader = BilibiliDownloader()
+        self.merger = VideoMerge()
+
+    def download(self, urls):
+        for url in urls:
+            video = self.crawler.get(url)
+            self.downloader.download_video(video)
+            self.merger.merge_video(video)
+
+def main():
 
     # 开始下载时刻
     start_time = time.time()
 
-    # 获取视频和音频相关信息
-    bi = bilibili.BilibiliInfo(url)
-    page_info = bi.get_video_page()
-    video_info = bi.get_video_info(page_info)
-    audio_info = bi.get_audio_info(page_info)
-
-    # 下载视频和音频
-    bd = download.BilibiliDownloader(video_info, audio_info)
-
-    # 创建线程池
-    threadpool = []
-
-    t1 = threading.Thread(target=bd.download_video)
-    threadpool.append(t1)
-    t2 = threading.Thread(target=bd.download_audio)
-    threadpool.append(t2)
-
-    # 开启多线程
-    for th in threadpool:
-        th.start()
-    # 等待所有线程运行完毕
-    for th in threadpool:
-        th.join()
-
-    # 开始合并视频
-    vm = merge.VideoMerge(video_info, audio_info)
-    vm.merge_video()
+    b = BFacade()
+    b.download([
+        'https://www.bilibili.com/video/BV17t411w7S2?spm_id_from=333.337.search-card.all.click&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
+        'https://www.bilibili.com/video/BV1zY4y1E7WX?p=7&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
+        # 'https://www.bilibili.com/video/BV1ox41147NZ?spm_id_from=333.337.search-card.all.click',
+    ])
 
     # 计算用时
     end_time = time.time()
@@ -48,5 +40,4 @@ def main(url):
 
 
 if __name__ == '__main__':
-    url = sys.argv[1]
-    main(url)
+    main()
