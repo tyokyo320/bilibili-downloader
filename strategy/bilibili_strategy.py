@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 
 from models.video import Video
 
+
 class BilibiliStrategy(ABC):
 
     def __init__(self) -> None:

@@ -16,8 +16,9 @@
 
 - [x] B站视频下载
 - [x] 支持使用账号cookie下载大会员视频
+- [x] 批量下载
+- [ ] 下载进度条【待修复】
 - [ ] 支持番剧下载【待更新】
-- [ ] 批量下载【待更新】
 - [ ] 添加代理【待更新】
 - [ ] 其他【待更新】
 
@@ -29,35 +30,63 @@ pip3 install -r requirements.txt
 
 ## :pencil2: COOKIE设置说明
 
-打开`config.py`，**需要定期(30天)替换**cookie中的`SESSDATA`值
+打开`config.py`，**需要定期(30天)替换**cookie
 
 替换方法：
 
 1. 浏览器登录B站，打开要下载的视频页
 2. `Ctrl + Shift + I`或者鼠标右键选择检查，然后选择`网络`
 3. `Ctrl + R`刷新网页，选择第一个，请求表头中找到`cookie`
-4. cookie中找到`SESSDATA`值替换
 
 ![](docs/set-cookie.png)
 
+## :pencil2: 下载链接添加说明
+
+打开`config.py`，在 `URL` 列表种添加视频 URL
+
+```py
+# 下载视频的 URL
+URL = [
+    'https://www.bilibili.com/video/BV1M4411c7P4/?spm_id_from=333.999.0.0&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
+    'https://www.bilibili.com/video/BV1hB4y147j8/?spm_id_from=333.337.search-card.all.click',
+]
+```
+
 ## :rocket: 运行方法
 
-`python main.py`后面加上想要下载的视频URL即可
+`python main.py`
 
 ```bash
-# python main.py URL
-python main.py https://www.bilibili.com/video/BV15b4y1R7fK\?p\=1
+# python main.py
+python main.py
 
-下载的视频清晰度：超清 4K
-开始下载视频： 【4K收藏级画质】吹响吧！上低音号 1~2季NCOP、NCED 无字无水印素材.mp4
-开始下载音频： 【4K收藏级画质】吹响吧！上低音号 1~2季NCOP、NCED 无字无水印素材.mp3
-Moviepy - Building video /home/user/Programming/Python/bilibili-downloader/bilibili_video/【4K收藏级画质】吹响吧！上低音号 1~2季NCOP、NCED 无字无水印素材.mp4.
-Moviepy - Writing video /home/user/Programming/Python/bilibili-downloader/bilibili_video/【4K收藏级画质】吹响吧！上低音号 1~2季NCOP、NCED 无字无水印素材.mp4
+マリーゴールド-万寿菊 -あいみょん【璃露】
+下载的视频清晰度：高清 1080P
+开始下载视频： マリーゴールド-万寿菊 -あいみょん【璃露】.mp4
+【下载视频完毕】
+开始下载音频： マリーゴールド-万寿菊 -あいみょん【璃露】.mp3
+【下载音频完毕】
+マリーゴールド-万寿菊 -あいみょん【璃露】
+Moviepy - Building video /home/users/work/repos/bilibili-downloader/output/マリーゴールド-万寿菊 -あいみょん【璃露】.mp4.
+Moviepy - Writing video /home/users/work/repos/bilibili-downloader/output/マリーゴールド-万寿菊 -あいみょん【璃露】.mp4
 
-Moviepy - Done !                                                                                                                                                                                                                                                                     
-Moviepy - video ready /home/user/Programming/Python/bilibili-downloader/bilibili_video/【4K收藏级画质】吹响吧！上低音号 1~2季NCOP、NCED 无字无水印素材.mp4
+Moviepy - Done !                                                                                                                                                                                                                                                                
+Moviepy - video ready /home/users/work/repos/bilibili-downloader/output/マリーゴールド-万寿菊 -あいみょん【璃露】.mp4
 视频合成结束
-总计用时：5分钟32秒
+🌛勾指起誓🌛 中日英3语版【雨音月奈】
+下载的视频清晰度：高清 1080P
+开始下载视频： 🌛勾指起誓🌛 中日英3语版【雨音月奈】.mp4
+【下载视频完毕】
+开始下载音频： 🌛勾指起誓🌛 中日英3语版【雨音月奈】.mp3
+【下载音频完毕】
+🌛勾指起誓🌛 中日英3语版【雨音月奈】
+Moviepy - Building video /home/users/work/repos/bilibili-downloader/output/🌛勾指起誓🌛 中日英3语版【雨音月奈】.mp4.
+Moviepy - Writing video /home/users/work/repos/bilibili-downloader/output/🌛勾指起誓🌛 中日英3语版【雨音月奈】.mp4
+
+Moviepy - Done !                                                                                                                                                                                                                                                                
+Moviepy - video ready /home/users/work/repos/bilibili-downloader/output/🌛勾指起誓🌛 中日英3语版【雨音月奈】.mp4
+视频合成结束
+总计用时：4分钟10秒
 ```
 
 ## :tv: 运行效果

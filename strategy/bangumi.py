@@ -24,14 +24,14 @@ class BangumiStrategy(BilibiliStrategy):
         )
         response.raise_for_status()
         bs = BeautifulSoup(response.text, 'html.parser')
-        
+
         return bs
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
         video_title = bs.find_all('h1')[0].get_text()
         video_title = video_title.replace('/', '-')
         print(video_title)
-        
+
         return video_title
 
     def get_param_json(self, bs: BeautifulSoup) -> str:
@@ -45,15 +45,16 @@ class BangumiStrategy(BilibiliStrategy):
         result = pattern.search(script.next).group(1)
         result = result.replace(result[-1], '')
         param_json = json.loads(result)
-        
+
         return param_json
-    
+
     def get_session_param(self, bs: BeautifulSoup) -> str:
         pass
 
     def get_video_page(self, aid: str, cid: str, epid: str, session: str) -> BeautifulSoup:
         response = requests.post(
-            url='https://api.bilibili.com/pgc/player/web/playurl?avid={}&cid={}&qn=116&fnver=0&fnval=80&fourk=1&ep_id={}&session={}'.format(aid, cid, epid, session),
+            url='https://api.bilibili.com/pgc/player/web/playurl?avid={}&cid={}&qn=116&fnver=0&fnval=80&fourk=1&ep_id={}&session={}'.format(
+                aid, cid, epid, session),
             headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68',
                 'cookie': config.COOKIE
@@ -77,6 +78,7 @@ class BangumiStrategy(BilibiliStrategy):
         cid = param_json['epInfo']['cid']
         ep_id = param_json['epInfo']['id']
         # self.get_video_page(aid, cid, ep_id)
+
 
 '''
 # API

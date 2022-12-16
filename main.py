@@ -3,6 +3,7 @@ import time
 from strategy.bilibili_executor import BilibiliExecutor
 from strategy.bilibili_executor import BilibiliDownloader
 from strategy.bilibili_executor import VideoMerge
+import config
 
 
 class BFacade():
@@ -18,17 +19,14 @@ class BFacade():
             self.downloader.download_video(video)
             self.merger.merge_video(video)
 
+
 def main():
 
     # 开始下载时刻
     start_time = time.time()
 
     b = BFacade()
-    b.download([
-        'https://www.bilibili.com/video/BV17t411w7S2?spm_id_from=333.337.search-card.all.click&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
-        'https://www.bilibili.com/video/BV1zY4y1E7WX?p=7&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
-        # 'https://www.bilibili.com/video/BV1ox41147NZ?spm_id_from=333.337.search-card.all.click',
-    ])
+    b.download(config.URL)
 
     # 计算用时
     end_time = time.time()
