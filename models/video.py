@@ -1,3 +1,6 @@
+import re
+
+
 class Video():
 
     def __init__(self, url: str, category: int) -> None:
@@ -5,7 +8,8 @@ class Video():
         self.category = category
 
     def set_title(self, title: str) -> None:
-        self.title = title
+        pattern = re.compile(r'[<>:"\/\\|\?\*]')
+        self.title = re.sub(pattern, "", title)
 
     def set_quality(self, id: int) -> None:
         self.quality = {
