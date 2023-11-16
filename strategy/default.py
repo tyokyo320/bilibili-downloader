@@ -47,7 +47,6 @@ class DefaultStrategy(BilibiliStrategy):
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
         video_title = bs.find('h1').get_text()
-        video_title = video_title.replace('/', '-')
         print(video_title)
 
         return video_title
