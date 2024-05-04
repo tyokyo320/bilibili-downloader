@@ -13,6 +13,8 @@ class Video():
 
     def set_quality(self, id: int) -> None:
         self.quality = {
+            127: '超高清 8K',
+            126: '杜比视界 4K',
             120: '超清 4K',
             116: '高清 1080P60',
             112: '高清 1080P+',
