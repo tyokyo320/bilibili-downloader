@@ -2,4 +2,4 @@ beautifulsoup4==4.9.3
 httpx==0.23.1
 moviepy==1.0.3
 requests==2.31.0
-urllib3==1.26.18
+urllib3==1.26.19
