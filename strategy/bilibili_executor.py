@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 
 import httpx
@@ -151,10 +152,29 @@ class VideoMerge():
         if not os.path.exists(self.path):
             os.mkdir(self.path)
 
-        clip = mp.VideoFileClip(os.path.join(
-            self.temp_path, video_filename)).subclip()
-        clip.write_videofile(os.path.join(self.path, video_filename), audio=os.path.join(
-            self.temp_path, audio_filename), preset="ultrafast", threads=8)
+        # 如果 ffmpeg 存在，则用其合并视频和音频
+        if subprocess.run("ffmpeg -version").returncode == 0:
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-i",
+                    os.path.join(self.temp_path, video_filename),
+                    "-i",
+                    os.path.join(self.temp_path, audio_filename),
+                    "-c:v",
+                    "copy",
+                    "-c:a",
+                    "copy",
+                    os.path.join(self.path, video_filename),
+                ],
+            )
+        else:
+            print("ffmpeg 不存在，使用 moviepy 合并视频和音频")
+            clip = mp.VideoFileClip(os.path.join(
+                self.temp_path, video_filename)).subclip()
+            clip.write_videofile(os.path.join(self.path, video_filename), audio=os.path.join(
+                self.temp_path, audio_filename), preset="ultrafast", threads=8)
+
         print("视频合成结束")
 
         # TODO：OSError: [Errno 39] Directory not empty
