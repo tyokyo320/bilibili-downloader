@@ -1,7 +1,10 @@
 import os
+import time
 
+import httpx
 import moviepy.editor as mp
-import urllib
+
+from tqdm import tqdm
 
 from strategy.bilibili_strategy import BilibiliStrategy
 from strategy.default import DefaultStrategy
@@ -90,39 +93,44 @@ class BilibiliDownloader():
         # urllib.request.urlretrieve(url=audio_url, filename=os.path.join(self.temp_path, audio_filename), reporthook=self._schedule)
         print("【下载音频完毕】")
 
-    def _download(self, url, filename) -> None:
-        request = urllib.request.Request(url, headers=self.headers)
-        response = urllib.request.urlopen(request).read()
-        with open(os.path.join(self.temp_path, filename), mode='wb') as f:
-            f.write(response)
+    def _download(self, url, filename, max_retries=3, retry_delay=5) -> None:
+        retries = 0
+        while retries < max_retries:
+            try:
+                # 检查文件是否已存在
+                file_size = 0
+                if os.path.exists(filename):
+                    file_size = os.path.getsize(filename)
 
-    # def _schedule(self, block_count, block_size, total_size) -> None:
-    #     '''
-    #     urllib.urlretrieve 的回调函数
-    #     :param block_count: 已经下载的数据块
-    #     :param block_size: 数据块的大小
-    #     :param total_size: 远程文件的大小
-    #     :return:
-    #     '''
-    #     # percent = 100.0 * block_count * block_size / total_size
-    #     # if percent > 100:
-    #     #     percent = 100
-    #     # s = ('#' * round(percent)).ljust(100, '-')
-    #     # sys.stdout.write("%.2f%%" % percent + '[ ' + s + ']' + '\r')
-    #     # sys.stdout.flush()
+                # 设置请求头 Range 字段，用于断点续传
+                self.headers["Range"] = f"bytes={file_size}-"
+                with httpx.stream("GET", url, headers=self.headers) as response:
+                    if response.status_code == 416:
+                        print("文件已经下载完毕")
+                        return
 
-    #     percentage = 100.0 * block_count * block_size / total_size
-    #     if percentage > 100:
-    #         percentage = 100
-    #     max_bar = 50
-    #     bar_num = int(percentage / (100 / max_bar))
-    #     progress_element = '=' * bar_num
-    #     if bar_num != max_bar:
-    #         progress_element += '>'
-    #     bar_fill = ' '
-    #     bar = progress_element.ljust(max_bar, bar_fill)
-    #     total_size_kb = total_size / 1024
-    #     print(f'[{bar}] {percentage:.2f}% ({total_size_kb:.0f}KB)\r', end='')
+                    # 总的文件大小包括已下载的部分
+                    total_size = (
+                        int(response.headers.get("content-length", 0)) + file_size
+                    )
+
+                    mode = "ab" if file_size > 0 else "wb"
+
+                    # 使用 tqdm 显示进度条
+                    with open(filename, mode) as file, tqdm(
+                        total=total_size, unit="B", unit_scale=True, initial=file_size
+                    ) as progress_bar:
+                        for chunk in response.iter_bytes():
+                            if chunk:
+                                file.write(chunk)
+                                progress_bar.update(len(chunk))  # 更新进度条
+                return # 下载成功，退出函数
+            except (httpx.RemoteProtocolError, httpx.RequestError) as e:
+                retries += 1
+                print(f"下载过程中出现错误: {e}，正在重试 ({retries}/{max_retries})...")
+                time.sleep(retry_delay)
+
+        print("下载失败，已达到最大重试次数")
 
 
 class VideoMerge():

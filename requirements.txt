@@ -3,3 +3,4 @@ httpx==0.23.1
 moviepy==1.0.3
 requests==2.32.0
 urllib3==1.26.19
+tqdm==4.66.5
