@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import time
 
@@ -153,7 +154,7 @@ class VideoMerge():
             os.mkdir(self.path)
 
         # 如果 ffmpeg 存在，则用其合并视频和音频
-        if subprocess.run("ffmpeg -version").returncode == 0:
+        if shutil.which("ffmpeg"):
             subprocess.run(
                 [
                     "ffmpeg",
