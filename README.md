@@ -6,10 +6,12 @@
 
 <div align=center>
     <img src="https://img.shields.io/badge/python-3.8%2B-blue"/>
-    <img src="https://img.shields.io/badge/requests-2.25.1-green"/>
-    <img src="https://img.shields.io/badge/urllib3-1.26.3-green"/>
+    <img src="https://img.shields.io/badge/requests-2.32.0-green"/>
+    <img src="https://img.shields.io/badge/urllib3-1.26.19-green"/>
+    <img src="https://img.shields.io/badge/httpx-0.23.1-green"/>
     <img src="https://img.shields.io/badge/beautifulsoup4-4.9.3-green"/>
     <img src="https://img.shields.io/badge/moviepy-1.0.3-green"/>
+    <img src="https://img.shields.io/badge/tqdm-4.66.5-green"/>
 </div>
 
 ## :pushpin: 功能说明
@@ -17,7 +19,7 @@
 - [x] B站视频下载
 - [x] 支持使用账号cookie下载大会员视频
 - [x] 批量下载
-- [ ] 下载进度条【待修复】
+- [x] 下载进度条
 - [ ] 支持番剧下载【待更新】
 - [ ] 添加代理【待更新】
 - [ ] 其他【待更新】
