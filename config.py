@@ -15,4 +15,7 @@ COOKIE = 'buvid3=C5DA0AE5-EE6D-EC73-9C00-91643BB46A8508801infoc; b_nut=166376580
 URL = [
     'https://www.bilibili.com/video/BV1M4411c7P4/?spm_id_from=333.999.0.0&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
     'https://www.bilibili.com/video/BV1hB4y147j8/?spm_id_from=333.337.search-card.all.click',
+    # 分 P 视频示例
+    'https://www.bilibili.com/video/BV1TnsZzHEcz?spm_id_from=333.788.videopod.episodes&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
+    'https://www.bilibili.com/video/BV1TnsZzHEcz?spm_id_from=333.788.videopod.episodes&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63&p=2'
 ]
