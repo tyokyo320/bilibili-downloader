@@ -78,8 +78,14 @@ class BilibiliDownloader():
         video_url = video.video_url
         audio_url = video.audio_url
 
-        video_filename = video.title + '.mp4'
-        audio_filename = video.title + '.mp3'
+        # 如果是分P视频（包括第1部分），在文件名中添加分P标识
+        # 这样可以避免多个分P之间的文件名冲突
+        if hasattr(video, 'part_number') and video.part_number >= 1:
+            video_filename = f'{video.title}_P{video.part_number}.mp4'
+            audio_filename = f'{video.title}_P{video.part_number}.mp3'
+        else:
+            video_filename = video.title + '.mp4'
+            audio_filename = video.title + '.mp3'
 
         # 创建文件夹存放下载的视频
         if not os.path.exists(self.temp_path):
@@ -146,8 +152,14 @@ class VideoMerge():
 
     def merge_video(self, video) -> None:
         print(video.title)
-        video_filename = video.title + '.mp4'
-        audio_filename = video.title + '.mp3'
+        # 如果是分P视频（包括第1部分），在文件名中添加分P标识
+        # 这样可以避免多个分P之间的文件名冲突
+        if hasattr(video, 'part_number') and video.part_number >= 1:
+            video_filename = f'{video.title}_P{video.part_number}.mp4'
+            audio_filename = f'{video.title}_P{video.part_number}.mp3'
+        else:
+            video_filename = video.title + '.mp4'
+            audio_filename = video.title + '.mp3'
 
         # 创建文件夹存放合并的视频
         if not os.path.exists(self.path):

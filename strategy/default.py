@@ -13,7 +13,8 @@ class DefaultStrategy(BilibiliStrategy):
 
     def __init__(self) -> None:
         super().__init__()
-        self.session = httpx.Client()
+        # 启用自动重定向
+        self.session = httpx.Client(follow_redirects=True)
         self.session.headers = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-encoding': 'gzip, deflate, br',

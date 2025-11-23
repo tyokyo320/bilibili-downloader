@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlparse, parse_qs
 
 
 class Video():
@@ -6,6 +7,19 @@ class Video():
     def __init__(self, url: str, category: int) -> None:
         self.url = url
         self.category = category
+        # 从 URL 中提取分P参数（如果存在）
+        self.part_number = self._extract_part_number(url)
+
+    def _extract_part_number(self, url: str) -> int:
+        """从URL中提取分P参数，如果不存在则返回1"""
+        try:
+            parsed_url = urlparse(url)
+            query_params = parse_qs(parsed_url.query)
+            # 获取 p 参数，如果不存在则默认为 1
+            part = query_params.get('p', ['1'])[0]
+            return int(part)
+        except (ValueError, IndexError):
+            return 1
 
     def set_title(self, title: str) -> None:
         pattern = re.compile(r'[<>:"\/\\|\?\*]')
