@@ -71,6 +71,7 @@ class DefaultStrategy(BilibiliStrategy):
         bs = self.get_video_page(video.url)
         title = self.get_video_title(bs)
         json = self.get_video_json(bs)
+        
         # 新版前端json格式更改，增加了['result']['video_info']两层
         # 这里默认获取最高画质
         quality_id = json['result']['video_info']['dash']['video'][0]['id']
