@@ -48,22 +48,29 @@ class DefaultStrategy(BilibiliStrategy):
     def get_video_title(self, bs: BeautifulSoup) -> str:
         # 新版本前端html中没有<h1>节点，改为寻找<title>节点
         video_title = bs.find('title').get_text()
-        print(video_title)
-
         return video_title
 
     def get_video_json(self, bs: BeautifulSoup) -> dict:
-        # 更改了json匹配的正则表达式
-        script = bs.find("script", string=re.compile("playurlSSRData"))
-        
-        if script:
-            pattern = re.compile(r"const\s+playurlSSRData\s*=\s*(\{.*?\})\s*window", re.DOTALL)
-            match = pattern.search(script.string)
+        pattern = re.compile(r"window.playinfo=(.*?)$", re.MULTILINE | re.DOTALL)
+        script = bs.find("script", text=pattern)
+        print(script)
+        if script is not None:
+            print(1)
+            result = pattern.search(script.next).group(1)
+            video_json = json.loads(result)
+            return video_json
+        else:
+            # 更改了json匹配的正则表达式
+            script = bs.find("script", string=re.compile("playurlSSRData"))
             
-            if match:
-                json_str = match.group(1)
-                data = json.loads(json_str)
-                return data.get('data')
+            if script:
+                pattern = re.compile(r"const\s+playurlSSRData\s*=\s*(\{.*?\})\s*window", re.DOTALL)
+                match = pattern.search(script.string)
+                
+                if match:
+                    json_str = match.group(1)
+                    data = json.loads(json_str)
+                    return data.get('data')
                 
         return None
 
@@ -74,9 +81,14 @@ class DefaultStrategy(BilibiliStrategy):
         
         # 新版前端json格式更改，增加了['result']['video_info']两层
         # 这里默认获取最高画质
-        quality_id = json['result']['video_info']['dash']['video'][0]['id']
-        video_url = json['result']['video_info']['dash']['video'][0]['base_url']
-        audio_url = json['result']['video_info']['dash']['audio'][0]['base_url']
+        if json['result'] is not None:
+            quality_id = json['result']['video_info']['dash']['video'][0]['id']
+            video_url = json['result']['video_info']['dash']['video'][0]['base_url']
+            audio_url = json['result']['video_info']['dash']['audio'][0]['base_url']
+        else:
+            quality_id = json['data']['dash']['video'][0]['id']
+            video_url = json['data']['dash']['video'][0]['baseUrl']
+            audio_url = json['data']['dash']['audio'][0]['baseUrl']
 
         video.set_title(title)
         video.set_quality(quality_id)
