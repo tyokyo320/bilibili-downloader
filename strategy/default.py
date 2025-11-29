@@ -46,21 +46,18 @@ class DefaultStrategy(BilibiliStrategy):
         return bs
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
-        # 新版本前端html中没有<h1>节点，改为寻找<title>节点
+        # 有些html中没有<h1>节点，改为寻找<title>节点更加普适
         video_title = bs.find('title').get_text()
         return video_title
 
     def get_video_json(self, bs: BeautifulSoup) -> dict:
-        pattern = re.compile(r"window.playinfo=(.*?)$", re.MULTILINE | re.DOTALL)
+        pattern = re.compile(r"window\.__playinfo__=(.*?)$", re.MULTILINE | re.DOTALL)
         script = bs.find("script", text=pattern)
-        print(script)
         if script is not None:
-            print(1)
             result = pattern.search(script.next).group(1)
             video_json = json.loads(result)
             return video_json
         else:
-            # 更改了json匹配的正则表达式
             script = bs.find("script", string=re.compile("playurlSSRData"))
             
             if script:
@@ -79,9 +76,8 @@ class DefaultStrategy(BilibiliStrategy):
         title = self.get_video_title(bs)
         json = self.get_video_json(bs)
         
-        # 新版前端json格式更改，增加了['result']['video_info']两层
         # 这里默认获取最高画质
-        if json['result'] is not None:
+        if 'result' in json:
             quality_id = json['result']['video_info']['dash']['video'][0]['id']
             video_url = json['result']['video_info']['dash']['video'][0]['base_url']
             audio_url = json['result']['video_info']['dash']['audio'][0]['base_url']
