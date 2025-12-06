@@ -38,7 +38,8 @@ class Video():
             32: '清晰 480P',
             16: '流畅 360P',
         }
-        print(f'下载的视频清晰度：{self.quality[id]}')
+        self.quality_id = id
+        print(f'📺 清晰度：{self.quality[id]}')
 
     def set_video_url(self, video_url: str) -> None:
         self.video_url = video_url
