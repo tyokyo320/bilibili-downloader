@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import httpx
+import asyncio
 
 import config
 from strategy.bilibili_strategy import BilibiliStrategy
@@ -13,9 +14,8 @@ class BangumiStrategy(BilibiliStrategy):
 
     def __init__(self) -> None:
         super().__init__()
-        # 启用自动重定向
-        self.session = httpx.Client(follow_redirects=True)
-        self.session.headers = {
+        # 请求头配置
+        self.headers = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'en-US,en;q=0.9',
@@ -35,15 +35,12 @@ class BangumiStrategy(BilibiliStrategy):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46',
         }
 
-    def get_video_page(self, url: str) -> BeautifulSoup:
-        response = self.session.get(
-            url=url,
-            headers=self.session.headers
-        )
-
-        response.raise_for_status()
-        bs = BeautifulSoup(response.text, 'html.parser')
-        return bs
+    async def get_video_page(self, url: str) -> BeautifulSoup:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.get(url=url, headers=self.headers)
+            response.raise_for_status()
+            bs = BeautifulSoup(response.text, 'html.parser')
+            return bs
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
         # 番剧/电影使用 <title> 标签（因为可能没有 <h1>）
@@ -96,8 +93,8 @@ class BangumiStrategy(BilibiliStrategy):
                         "3. 检查视频是否需要特定的会员权限"
                     )
 
-    def get(self, video: Video) -> Video:
-        bs = self.get_video_page(video.url)
+    async def get(self, video: Video) -> Video:
+        bs = await self.get_video_page(video.url)
         title = self.get_video_title(bs)
         json_data = self.get_video_json(bs)
 
