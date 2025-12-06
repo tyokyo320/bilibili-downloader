@@ -50,7 +50,6 @@ class BangumiStrategy(BilibiliStrategy):
         title_tag = bs.find('title')
         if title_tag:
             video_title = title_tag.get_text()
-            print(video_title)
             return video_title
 
         raise ValueError("无法获取视频标题")
@@ -158,12 +157,12 @@ class BangumiStrategy(BilibiliStrategy):
 
         # 如果最高质量低于720P，提示用户可能的原因
         if quality_id < 64:  # 64 = 720P
-            print(f"⚠️  当前最高可用质量较低 (ID={quality_id})")
-            print("可能原因：")
-            print("  1. 账号无会员权限（大会员可下载高清画质）")
-            print("  2. 地理位置限制（海外IP可能被限制画质）")
-            print("  3. 视频本身只有低画质版本")
+            print(f"\n⚠️  当前最高可用质量较低 (ID={quality_id})")
+            print("   可能原因：")
+            print("   • 账号无会员权限（大会员可下载高清画质）")
+            print("   • 地理位置限制（海外IP可能被限制画质）")
+            print("   • 视频本身只有低画质版本")
             if len(available_qualities) > 1:
-                print(f"  可用画质列表: {available_qualities}")
+                print(f"   可用画质列表: {available_qualities}")
 
         return video

@@ -12,12 +12,17 @@ class BFacade():
         self.crawler = BilibiliExecutor()
         self.downloader = BilibiliDownloader()
         self.merger = VideoMerge()
+        self.downloaded_videos = []
 
     def download(self, urls):
         for url in urls:
             video = self.crawler.get(url)
+            print(f"\n{'=' * 60}")
+            print(f"📹 {video.title}")
+            print(f"{'=' * 60}")
             self.downloader.download_video(video)
             self.merger.merge_video(video)
+            self.downloaded_videos.append(video)
 
 
 def main():
@@ -34,7 +39,22 @@ def main():
     minutes = times // 60
     times %= 60
     seconds = times
-    print(f"总计用时：{minutes}分钟{seconds}秒")
+
+    # 输出下载摘要
+    print(f"\n{'=' * 60}")
+    print("📊 下载摘要")
+    print(f"{'=' * 60}")
+    print(f"✅ 成功下载 {len(b.downloaded_videos)} 个视频")
+    print(f"⏱️  总计用时：{minutes}分钟{seconds}秒")
+
+    if b.downloaded_videos:
+        print(f"\n已下载的视频：")
+        for i, video in enumerate(b.downloaded_videos, 1):
+            quality_name = video.quality.get(video.quality_id, f"未知 (ID={video.quality_id})")
+            print(f"  {i}. {video.title} ({quality_name})")
+
+    print(f"\n💾 视频保存位置：{config.OUTPUT_PATH}")
+    print(f"{'=' * 60}\n")
 
 
 if __name__ == '__main__':

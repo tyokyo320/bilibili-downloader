@@ -105,15 +105,15 @@ class BilibiliDownloader():
         if not os.path.exists(self.temp_path):
             os.mkdir(self.temp_path)
 
-        print("开始下载视频：", video_filename)
+        print(f"\n📥 下载视频：{video_filename}")
         self._download(video_url, os.path.join(self.temp_path, video_filename))
         # urllib.request.urlretrieve(url=video_url, filename=os.path.join(self.temp_path, video_filename), reporthook=self._schedule)
-        print("【下载视频完毕】")
+        print("✅ 视频下载完成")
 
-        print("开始下载音频：", audio_filename)
+        print(f"\n🎵 下载音频：{audio_filename}")
         self._download(audio_url, os.path.join(self.temp_path, audio_filename))
         # urllib.request.urlretrieve(url=audio_url, filename=os.path.join(self.temp_path, audio_filename), reporthook=self._schedule)
-        print("【下载音频完毕】")
+        print("✅ 音频下载完成")
 
     def _download(self, url, filename, max_retries=3, retry_delay=5) -> None:
         retries = 0
@@ -165,7 +165,6 @@ class VideoMerge():
         self.path = config.OUTPUT_PATH
 
     def merge_video(self, video) -> None:
-        print(video.title)
         # 如果是分P视频（包括第1部分），在文件名中添加分P标识
         # 这样可以避免多个分P之间的文件名冲突
         if hasattr(video, 'part_number') and video.part_number >= 1:
@@ -181,7 +180,7 @@ class VideoMerge():
 
         # 如果 ffmpeg 存在，则用其合并视频和音频
         if shutil.which("ffmpeg"):
-            print("正在合并视频和音频...")
+            print(f"\n🎬 合并视频和音频...")
             result = subprocess.run(
                 [
                     "ffmpeg",
@@ -202,13 +201,13 @@ class VideoMerge():
             if result.returncode != 0:
                 print(f"⚠️  ffmpeg 合并失败，退出代码: {result.returncode}")
         else:
-            print("ffmpeg 不存在，使用 moviepy 合并视频和音频")
+            print(f"\n🎬 使用 moviepy 合并视频和音频...")
             clip = mp.VideoFileClip(os.path.join(
                 self.temp_path, video_filename)).subclip()
             clip.write_videofile(os.path.join(self.path, video_filename), audio=os.path.join(
                 self.temp_path, audio_filename), preset="ultrafast", threads=8)
 
-        print("视频合成结束")
+        print("✅ 视频合成完成")
 
         # TODO：OSError: [Errno 39] Directory not empty
         os.remove(os.path.join(self.temp_path, video_filename))
