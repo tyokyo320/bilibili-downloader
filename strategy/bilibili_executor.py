@@ -32,12 +32,26 @@ class BilibiliExecutor():
         self._strategy = strategy
 
     def get_video(self, url) -> Video:
-        # set category
-        category = Category.default
-        # category = Category.bangumi
+        """根据 URL 自动识别视频类型"""
+        category = self._detect_category(url)
         video = Video(url, category)
-
         return video
+
+    def _detect_category(self, url: str) -> int:
+        """
+        根据 URL 模式识别视频分类
+
+        普通视频：
+        - https://www.bilibili.com/video/BV*
+        - https://www.bilibili.com/video/av*
+
+        番剧/电影/OGV：
+        - https://www.bilibili.com/bangumi/play/ss*  (season)
+        - https://www.bilibili.com/bangumi/play/ep*  (episode)
+        """
+        if '/bangumi/play/' in url:
+            return Category.bangumi
+        return Category.default
 
     def get(self, url: str) -> Video:
         video = self.get_video(url)
@@ -167,7 +181,8 @@ class VideoMerge():
 
         # 如果 ffmpeg 存在，则用其合并视频和音频
         if shutil.which("ffmpeg"):
-            subprocess.run(
+            print("正在合并视频和音频...")
+            result = subprocess.run(
                 [
                     "ffmpeg",
                     "-i",
@@ -179,8 +194,13 @@ class VideoMerge():
                     "-c:a",
                     "copy",
                     os.path.join(self.path, video_filename),
+                    "-y",  # 自动覆盖已存在的文件
                 ],
+                stdout=subprocess.DEVNULL,  # 隐藏标准输出
+                stderr=subprocess.DEVNULL,  # 隐藏错误输出
             )
+            if result.returncode != 0:
+                print(f"⚠️  ffmpeg 合并失败，退出代码: {result.returncode}")
         else:
             print("ffmpeg 不存在，使用 moviepy 合并视频和音频")
             clip = mp.VideoFileClip(os.path.join(

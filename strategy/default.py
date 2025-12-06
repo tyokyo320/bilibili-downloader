@@ -46,49 +46,76 @@ class DefaultStrategy(BilibiliStrategy):
         return bs
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
-        # 有些html中没有<h1>节点，改为寻找<title>节点更加普适
-        video_title = bs.find('title').get_text()
-        return video_title
+        # 普通视频优先使用 <h1> 标签
+        h1_tag = bs.find('h1')
+        if h1_tag:
+            video_title = h1_tag.get_text()
+            print(video_title)
+            return video_title
+
+        # 备用方案：使用 <title> 标签
+        title_tag = bs.find('title')
+        if title_tag:
+            return title_tag.get_text()
+
+        raise ValueError("无法获取视频标题")
 
     def get_video_json(self, bs: BeautifulSoup) -> dict:
+        """只处理 window.__playinfo__ 格式（普通视频）"""
         pattern = re.compile(r"window\.__playinfo__=(.*?)$", re.MULTILINE | re.DOTALL)
         script = bs.find("script", text=pattern)
-        if script is not None:
-            result = pattern.search(script.next).group(1)
-            video_json = json.loads(result)
-            return video_json
-        else:
-            script = bs.find("script", string=re.compile("playurlSSRData"))
-            
-            if script:
-                pattern = re.compile(r"const\s+playurlSSRData\s*=\s*(\{.*?\})\s*window", re.DOTALL)
-                match = pattern.search(script.string)
-                
-                if match:
-                    json_str = match.group(1)
-                    data = json.loads(json_str)
-                    return data.get('data')
-                
-        return None
+
+        if script is None:
+            raise ValueError(
+                "未找到视频数据 (window.__playinfo__)。\n"
+                "可能原因：\n"
+                "1. URL 不是普通视频类型（可能是番剧/电影，应使用 BangumiStrategy）\n"
+                "2. 视频已下架或不存在\n"
+                "3. 需要登录或会员权限"
+            )
+
+        result = pattern.search(script.next).group(1)
+        video_json = json.loads(result)
+        return video_json
 
     def get(self, video: Video) -> Video:
         bs = self.get_video_page(video.url)
         title = self.get_video_title(bs)
-        json = self.get_video_json(bs)
-        
-        # 这里默认获取最高画质
-        if 'result' in json:
-            quality_id = json['result']['video_info']['dash']['video'][0]['id']
-            video_url = json['result']['video_info']['dash']['video'][0]['base_url']
-            audio_url = json['result']['video_info']['dash']['audio'][0]['base_url']
-        else:
-            quality_id = json['data']['dash']['video'][0]['id']
-            video_url = json['data']['dash']['video'][0]['baseUrl']
-            audio_url = json['data']['dash']['audio'][0]['baseUrl']
+        json_data = self.get_video_json(bs)
+
+        # 获取所有可用的视频质量（按质量ID降序排列）
+        # Bilibili API 返回的 video 数组已按质量从高到低排序
+        # 索引 [0] 是最高可用质量
+        video_streams = json_data['data']['dash']['video']
+        audio_streams = json_data['data']['dash']['audio']
+
+        # 选择最高质量（第一个元素）
+        # print("可用视频质量列表（ID）:", [v['id'] for v in video_streams])
+        best_video = video_streams[0]
+        quality_id = best_video['id']
+        video_url = best_video['baseUrl']
+
+        # 选择最高质量音频
+        best_audio = audio_streams[0]
+        audio_url = best_audio['baseUrl']
+
+        # 显示所有可用质量（用于调试）
+        available_qualities = list(set([v['id'] for v in video_streams]))
+        available_qualities.sort(reverse=True)
 
         video.set_title(title)
         video.set_quality(quality_id)
         video.set_video_url(video_url)
         video.set_audio_url(audio_url)
+
+        # 如果最高质量低于720P，提示用户可能的原因
+        if quality_id < 64:  # 64 = 720P
+            print(f"⚠️  当前最高可用质量较低 (ID={quality_id})")
+            print("可能原因：")
+            print("  1. 账号无会员权限（大会员可下载高清画质）")
+            print("  2. 地理位置限制（海外IP可能被限制画质）")
+            print("  3. 视频本身只有低画质版本")
+            if len(available_qualities) > 1:
+                print(f"  可用画质列表: {available_qualities}")
 
         return video
