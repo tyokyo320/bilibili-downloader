@@ -1,5 +1,5 @@
-import requests
 from bs4 import BeautifulSoup
+import httpx
 
 import config
 from strategy.bilibili_strategy import BilibiliStrategy
@@ -13,87 +13,157 @@ class BangumiStrategy(BilibiliStrategy):
 
     def __init__(self) -> None:
         super().__init__()
+        # 启用自动重定向
+        self.session = httpx.Client(follow_redirects=True)
+        self.session.headers = {
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'accept-encoding': 'gzip, deflate, br',
+            'accept-language': 'en-US,en;q=0.9',
+            'cache-control': 'max-age=0',
+            "Content-Type": "application/json; charset=utf-8",
+            'cookie': config.COOKIE,
+            'pragma': 'no-cache',
+            'referer': 'https://space.bilibili.com/',
+            'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Microsoft Edge";v="108"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'document',
+            'sec-fetch-mode': 'navigate',
+            'sec-fetch-site': 'same-origin',
+            'sec-fetch-user': '?1',
+            'upgrade-insecure-requests': '1',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46',
+        }
 
-    def get_info_page(self, url) -> BeautifulSoup:
-        response = requests.get(
+    def get_video_page(self, url: str) -> BeautifulSoup:
+        response = self.session.get(
             url=url,
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68',
-                'cookie': config.COOKIE
-            },
+            headers=self.session.headers
         )
+
         response.raise_for_status()
         bs = BeautifulSoup(response.text, 'html.parser')
-
         return bs
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
-        video_title = bs.find_all('h1')[0].get_text()
-        video_title = video_title.replace('/', '-')
-        print(video_title)
+        # 番剧/电影使用 <title> 标签（因为可能没有 <h1>）
+        title_tag = bs.find('title')
+        if title_tag:
+            video_title = title_tag.get_text()
+            print(video_title)
+            return video_title
 
-        return video_title
+        raise ValueError("无法获取视频标题")
 
-    def get_param_json(self, bs: BeautifulSoup) -> str:
-        '''
-        获取所需要的参数avid和cid
-        '''
-
-        pattern = re.compile(
-            r"window\.__INITIAL_STATE__=(.*};)", re.MULTILINE | re.DOTALL)
+    def get_video_json(self, bs: BeautifulSoup) -> dict:
+        """处理 OGV 内容的多种数据格式"""
+        # 路径 1: 尝试 window.__playinfo__ (部分番剧)
+        pattern = re.compile(r"window\.__playinfo__=(.*?)$", re.MULTILINE | re.DOTALL)
         script = bs.find("script", text=pattern)
-        result = pattern.search(script.next).group(1)
-        result = result.replace(result[-1], '')
-        param_json = json.loads(result)
+        if script is not None:
+            result = pattern.search(script.next).group(1)
+            video_json = json.loads(result)
+            return video_json
 
-        return param_json
+        # 路径 2: 尝试 playurlSSRData (会员内容/电影)
+        script = bs.find("script", string=re.compile("playurlSSRData"))
+        if script:
+            pattern = re.compile(
+                r"const\s+playurlSSRData\s*=\s*(\{.*?\})\s*window",
+                re.DOTALL
+            )
+            match = pattern.search(script.string)
+            if match:
+                json_str = match.group(1)
+                data = json.loads(json_str)
+                return data.get('data')
 
-    def get_session_param(self, bs: BeautifulSoup) -> str:
-        pass
+        return None
 
-    def get_video_page(self, aid: str, cid: str, epid: str, session: str) -> BeautifulSoup:
-        response = requests.post(
-            url='https://api.bilibili.com/pgc/player/web/playurl?avid={}&cid={}&qn=116&fnver=0&fnval=80&fourk=1&ep_id={}&session={}'.format(
-                aid, cid, epid, session),
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68',
-                'cookie': config.COOKIE
-            },
-        )
-        response.raise_for_status()
-        bs = BeautifulSoup(response.text, 'html.parser')
-        print(bs)
-        pass
+    def _check_area_limit(self, json_data: dict) -> None:
+        """检查并抛出地区限制错误"""
+        if not json_data or 'result' not in json_data:
+            return
 
-    def get_video_json(self, bs: BeautifulSoup) -> str:
-        pass
+        plugins = json_data['result'].get('plugins', [])
+        for plugin in plugins:
+            if plugin.get('name') == 'AreaLimitPanel':
+                if plugin.get('config', {}).get('is_block', False):
+                    raise Exception(
+                        "⚠️  该视频受地区限制，无法在当前地区播放\n\n"
+                        "可能的解决方案：\n"
+                        "1. 使用中国大陆的 VPN/代理服务\n"
+                        "2. 尝试下载其他无地区限制的视频\n"
+                        "3. 检查视频是否需要特定的会员权限"
+                    )
 
-    def get(self, video: Video):
-        bs = self.get_info_page(video.url)
+    def get(self, video: Video) -> Video:
+        bs = self.get_video_page(video.url)
         title = self.get_video_title(bs)
-        param_json = self.get_param_json(bs)
-        # video_json = self.get_video_json(bs)
+        json_data = self.get_video_json(bs)
 
-        aid = param_json['epInfo']['aid']
-        cid = param_json['epInfo']['cid']
-        ep_id = param_json['epInfo']['id']
-        # self.get_video_page(aid, cid, ep_id)
+        # 检查地区限制
+        self._check_area_limit(json_data)
 
+        if not json_data:
+            raise ValueError("无法获取视频数据")
 
-'''
-# API
-1. https://api.bilibili.com/pgc/player/web/playurl?avid=931871677&cid=375702034&qn=116&fnver=0&fnval=80&fourk=1&ep_id=409508&session=6bec9c995d114c65b27d9039cc381a9c
+        # 根据不同格式提取数据
+        if 'result' in json_data:
+            video_info = json_data['result'].get('video_info', {})
 
-avid: 931871677 -> AV号 376930505
-cid: 375702034 -> ep号里面获取的到
+            if 'dash' not in video_info:
+                raise ValueError(
+                    "该番剧/电影无法获取播放链接\n"
+                    "可能原因：\n"
+                    "1. 地区限制（即使通过检测，某些内容仍可能无法播放）\n"
+                    "2. 需要特定会员权限\n"
+                    "3. 需要额外的 API 调用来获取播放地址"
+                )
 
-qn: 116
-fnver: 0
-fnval: 80
-fourk: 1
+            # 有 dash 数据的情况 (result.video_info.dash)
+            video_streams = video_info['dash']['video']
+            audio_streams = video_info['dash']['audio']
 
-ep_id: 409508 -> ep号码 409010
-qn: 116
+            # 选择最高质量（第一个元素）
+            best_video = video_streams[0]
+            quality_id = best_video['id']
+            video_url = best_video['base_url']
 
-session: 6bec9c995d114c65b27d9039cc381a9c -> 加密
-'''
+            # 选择最高质量音频
+            best_audio = audio_streams[0]
+            audio_url = best_audio['base_url']
+        else:
+            # 使用标准格式 (data.dash)
+            video_streams = json_data['data']['dash']['video']
+            audio_streams = json_data['data']['dash']['audio']
+
+            # 选择最高质量（第一个元素）
+            best_video = video_streams[0]
+            quality_id = best_video['id']
+            video_url = best_video['baseUrl']
+
+            # 选择最高质量音频
+            best_audio = audio_streams[0]
+            audio_url = best_audio['baseUrl']
+
+        # 显示所有可用质量（用于调试）
+        available_qualities = list(set([v['id'] for v in video_streams]))
+        available_qualities.sort(reverse=True)
+
+        video.set_title(title)
+        video.set_quality(quality_id)
+        video.set_video_url(video_url)
+        video.set_audio_url(audio_url)
+
+        # 如果最高质量低于720P，提示用户可能的原因
+        if quality_id < 64:  # 64 = 720P
+            print(f"⚠️  当前最高可用质量较低 (ID={quality_id})")
+            print("可能原因：")
+            print("  1. 账号无会员权限（大会员可下载高清画质）")
+            print("  2. 地理位置限制（海外IP可能被限制画质）")
+            print("  3. 视频本身只有低画质版本")
+            if len(available_qualities) > 1:
+                print(f"  可用画质列表: {available_qualities}")
+
+        return video
