@@ -43,33 +43,48 @@ class DefaultStrategy(BilibiliStrategy):
 
         response.raise_for_status()
         bs = BeautifulSoup(response.text, 'html.parser')
-
         return bs
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
-        video_title = bs.find('h1').get_text()
-        print(video_title)
-
+        # 有些html中没有<h1>节点，改为寻找<title>节点更加普适
+        video_title = bs.find('title').get_text()
         return video_title
 
-    def get_video_json(self, bs: BeautifulSoup) -> str:
-        # 取视频链接
+    def get_video_json(self, bs: BeautifulSoup) -> dict:
         pattern = re.compile(r"window\.__playinfo__=(.*?)$", re.MULTILINE | re.DOTALL)
         script = bs.find("script", text=pattern)
-        result = pattern.search(script.next).group(1)
-        video_json = json.loads(result)
-
-        return video_json
+        if script is not None:
+            result = pattern.search(script.next).group(1)
+            video_json = json.loads(result)
+            return video_json
+        else:
+            script = bs.find("script", string=re.compile("playurlSSRData"))
+            
+            if script:
+                pattern = re.compile(r"const\s+playurlSSRData\s*=\s*(\{.*?\})\s*window", re.DOTALL)
+                match = pattern.search(script.string)
+                
+                if match:
+                    json_str = match.group(1)
+                    data = json.loads(json_str)
+                    return data.get('data')
+                
+        return None
 
     def get(self, video: Video) -> Video:
         bs = self.get_video_page(video.url)
         title = self.get_video_title(bs)
         json = self.get_video_json(bs)
-
+        
         # 这里默认获取最高画质
-        quality_id = json['data']['dash']['video'][0]['id']
-        video_url = json['data']['dash']['video'][0]['baseUrl']
-        audio_url = json['data']['dash']['audio'][0]['baseUrl']
+        if 'result' in json:
+            quality_id = json['result']['video_info']['dash']['video'][0]['id']
+            video_url = json['result']['video_info']['dash']['video'][0]['base_url']
+            audio_url = json['result']['video_info']['dash']['audio'][0]['base_url']
+        else:
+            quality_id = json['data']['dash']['video'][0]['id']
+            video_url = json['data']['dash']['video'][0]['baseUrl']
+            audio_url = json['data']['dash']['audio'][0]['baseUrl']
 
         video.set_title(title)
         video.set_quality(quality_id)
