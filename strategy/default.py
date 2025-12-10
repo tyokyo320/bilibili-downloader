@@ -35,12 +35,22 @@ class DefaultStrategy(BilibiliStrategy):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46',
         }
 
-    async def get_video_page(self, url: str) -> BeautifulSoup:
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.get(url=url, headers=self.headers)
-            response.raise_for_status()
-            bs = BeautifulSoup(response.text, 'html.parser')
-            return bs
+    async def get_video_page(self, url: str, max_retries: int = 3) -> BeautifulSoup:
+        timeout = httpx.Timeout(60.0, connect=15.0)
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
+                    response = await client.get(url=url, headers=self.headers)
+                    response.raise_for_status()
+                    bs = BeautifulSoup(response.text, 'html.parser')
+                    return bs
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RequestError) as e:
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 5  # 递增等待时间
+                    print(f"⚠️  获取页面超时，{wait_time}秒后重试 ({attempt + 1}/{max_retries})...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
         # 普通视频优先使用 <h1> 标签
@@ -79,39 +89,54 @@ class DefaultStrategy(BilibiliStrategy):
         title = self.get_video_title(bs)
         json_data = self.get_video_json(bs)
 
-        # 获取所有可用的视频质量（按质量ID降序排列）
-        # Bilibili API 返回的 video 数组已按质量从高到低排序
-        # 索引 [0] 是最高可用质量
-        video_streams = json_data['data']['dash']['video']
-        audio_streams = json_data['data']['dash']['audio']
+        data = json_data['data']
 
-        # 选择最高质量（第一个元素）
-        # print("可用视频质量列表（ID）:", [v['id'] for v in video_streams])
-        best_video = video_streams[0]
-        quality_id = best_video['id']
-        video_url = best_video['baseUrl']
+        # 检查是否为 durl 格式（充电专属视频的分P等场景）
+        if 'dash' in data:
+            # DASH 格式：音视频分离
+            video_streams = data['dash']['video']
+            audio_streams = data['dash']['audio']
 
-        # 选择最高质量音频
-        best_audio = audio_streams[0]
-        audio_url = best_audio['baseUrl']
+            # 选择最高质量（第一个元素）
+            best_video = video_streams[0]
+            quality_id = best_video['id']
+            video_url = best_video['baseUrl']
 
-        # 显示所有可用质量（用于调试）
-        available_qualities = list(set([v['id'] for v in video_streams]))
-        available_qualities.sort(reverse=True)
+            # 选择最高质量音频
+            best_audio = audio_streams[0]
+            audio_url = best_audio['baseUrl']
 
-        video.set_title(title)
-        video.set_quality(quality_id)
-        video.set_video_url(video_url)
-        video.set_audio_url(audio_url)
+            video.set_title(title)
+            video.set_quality(quality_id)
+            video.set_video_url(video_url)
+            video.set_audio_url(audio_url)
 
-        # 如果最高质量低于720P，提示用户可能的原因
-        if quality_id < 64:  # 64 = 720P
-            print(f"\n⚠️  当前最高可用质量较低 (ID={quality_id})")
-            print("   可能原因：")
-            print("   • 账号无会员权限（大会员可下载高清画质）")
-            print("   • 地理位置限制（海外IP可能被限制画质）")
-            print("   • 视频本身只有低画质版本")
-            if len(available_qualities) > 1:
-                print(f"   可用画质列表: {available_qualities}")
+            # 显示所有可用质量（用于调试）
+            available_qualities = list(set([v['id'] for v in video_streams]))
+            available_qualities.sort(reverse=True)
+
+        elif 'durl' in data:
+            # DURL 格式：音视频合并（充电专属视频的分P等）
+            video.is_durl = True
+            durl = data['durl'][0]  # 通常只有一个元素
+            quality_id = data.get('quality', 32)
+            video_url = durl['url']
+
+            video.set_title(title)
+            video.set_quality(quality_id)
+            video.set_video_url(video_url)
+            video.set_audio_url(None)  # durl 格式没有单独的音频
+
+            available_qualities = data.get('accept_quality', [quality_id])
+
+        else:
+            raise ValueError(
+                "未找到视频数据（dash 或 durl）。\n"
+                "可能原因：\n"
+                "1. 视频已下架或不存在\n"
+                "2. 需要登录或会员权限\n"
+                "3. 视频格式不支持"
+            )
+
 
         return video

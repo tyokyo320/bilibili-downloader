@@ -35,12 +35,22 @@ class BangumiStrategy(BilibiliStrategy):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46',
         }
 
-    async def get_video_page(self, url: str) -> BeautifulSoup:
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.get(url=url, headers=self.headers)
-            response.raise_for_status()
-            bs = BeautifulSoup(response.text, 'html.parser')
-            return bs
+    async def get_video_page(self, url: str, max_retries: int = 3) -> BeautifulSoup:
+        timeout = httpx.Timeout(60.0, connect=15.0)
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
+                    response = await client.get(url=url, headers=self.headers)
+                    response.raise_for_status()
+                    bs = BeautifulSoup(response.text, 'html.parser')
+                    return bs
+            except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RequestError) as e:
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 5  # 递增等待时间
+                    print(f"⚠️  获取页面超时，{wait_time}秒后重试 ({attempt + 1}/{max_retries})...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise
 
     def get_video_title(self, bs: BeautifulSoup) -> str:
         # 番剧/电影使用 <title> 标签（因为可能没有 <h1>）
@@ -151,15 +161,5 @@ class BangumiStrategy(BilibiliStrategy):
         video.set_quality(quality_id)
         video.set_video_url(video_url)
         video.set_audio_url(audio_url)
-
-        # 如果最高质量低于720P，提示用户可能的原因
-        if quality_id < 64:  # 64 = 720P
-            print(f"\n⚠️  当前最高可用质量较低 (ID={quality_id})")
-            print("   可能原因：")
-            print("   • 账号无会员权限（大会员可下载高清画质）")
-            print("   • 地理位置限制（海外IP可能被限制画质）")
-            print("   • 视频本身只有低画质版本")
-            if len(available_qualities) > 1:
-                print(f"   可用画质列表: {available_qualities}")
 
         return video
