@@ -105,19 +105,29 @@ class BilibiliDownloader():
         if not os.path.exists(self.temp_path):
             os.mkdir(self.temp_path)
 
-        # 并发下载视频和音频
-        print(f"\n📥 开始下载视频和音频：{video_filename}")
+        # 根据视频格式选择下载方式
+        if video.is_durl:
+            # durl 格式：只下载单个合并的视频文件
+            print(f"\n📥 开始下载视频：{video_filename}")
 
-        async with httpx.AsyncClient() as client:
-            video_task = self._download(client, video_url, os.path.join(self.temp_path, video_filename), "视频")
-            audio_task = self._download(client, audio_url, os.path.join(self.temp_path, audio_filename), "音频")
+            async with httpx.AsyncClient() as client:
+                await self._download(client, video_url, os.path.join(self.temp_path, video_filename), "视频", position=0)
 
-            # 并发下载视频和音频
-            await asyncio.gather(video_task, audio_task)
+            print("✅ 视频下载完成")
+        else:
+            # dash 格式：并发下载视频和音频
+            print(f"\n📥 开始下载视频和音频：{video_filename}\n")
 
-        print("✅ 视频和音频下载完成")
+            async with httpx.AsyncClient() as client:
+                video_task = self._download(client, video_url, os.path.join(self.temp_path, video_filename), "视频", position=0)
+                audio_task = self._download(client, audio_url, os.path.join(self.temp_path, audio_filename), "音频", position=1)
 
-    async def _download(self, client: httpx.AsyncClient, url, filename, file_type="文件", max_retries=3, retry_delay=5) -> None:
+                # 并发下载视频和音频
+                await asyncio.gather(video_task, audio_task)
+
+            print("\n✅ 视频和音频下载完成")
+
+    async def _download(self, client: httpx.AsyncClient, url, filename, file_type="文件", position=0, max_retries=3, retry_delay=5) -> None:
         retries = 0
         while retries < max_retries:
             try:
@@ -132,7 +142,7 @@ class BilibiliDownloader():
 
                 async with client.stream("GET", url, headers=headers) as response:
                     if response.status_code == 416:
-                        print(f"  {file_type}已经下载完毕")
+                        tqdm.write(f"  {file_type}已经下载完毕")
                         return
 
                     # 总的文件大小包括已下载的部分
@@ -149,7 +159,7 @@ class BilibiliDownloader():
                         unit_scale=True,
                         initial=file_size,
                         desc=f"  {file_type}",
-                        position=0,
+                        position=position,
                         leave=True
                     ) as progress_bar:
                         async for chunk in response.aiter_bytes():
@@ -159,10 +169,10 @@ class BilibiliDownloader():
                 return # 下载成功，退出函数
             except (httpx.RemoteProtocolError, httpx.RequestError) as e:
                 retries += 1
-                print(f"  {file_type}下载出现错误: {e}，正在重试 ({retries}/{max_retries})...")
+                tqdm.write(f"  {file_type}下载出现错误: {e}，正在重试 ({retries}/{max_retries})...")
                 await asyncio.sleep(retry_delay)
 
-        print(f"  ❌ {file_type}下载失败，已达到最大重试次数")
+        tqdm.write(f"  ❌ {file_type}下载失败，已达到最大重试次数")
 
 
 class VideoMerge():
@@ -188,6 +198,17 @@ class VideoMerge():
         if not os.path.exists(self.path):
             os.mkdir(self.path)
 
+        # durl 格式：音视频已合并，直接移动文件
+        if video.is_durl:
+            print(f"\n📁 移动视频到输出目录...")
+            shutil.move(
+                os.path.join(self.temp_path, video_filename),
+                os.path.join(self.path, video_filename)
+            )
+            print("✅ 视频处理完成")
+            return
+
+        # dash 格式：需要合并音视频
         # 如果 ffmpeg 存在，则用其合并视频和音频
         if shutil.which("ffmpeg"):
             print(f"\n🎬 合并视频和音频...")

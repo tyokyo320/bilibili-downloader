@@ -22,6 +22,14 @@ URL = [
     # 分P视频（第2个分P）
     'https://www.bilibili.com/video/BV1TnsZzHEcz/?p=2&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
 
+    # 充电专属视频
+    'https://www.bilibili.com/video/BV1W1wKeWEVe/?spm_id_from=333.1387.upload.video_card.click&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
+    # 'https://www.bilibili.com/video/BV1W1wKeWEVe/?spm_id_from=333.788.videopod.episodes&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63&p=2',
+    # 'https://www.bilibili.com/video/BV1vxfHYkEZe?spm_id_from=333.788.videopod.episodes&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
+    # 'https://www.bilibili.com/video/BV1vxfHYkEZe/?spm_id_from=333.788.videopod.episodes&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63&p=2',
+    # 'https://www.bilibili.com/video/BV1vxfHYkEZe/?spm_id_from=333.788.videopod.episodes&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63&p=3',
+    # 'https://www.bilibili.com/video/BV1Y1WbzmE1m/?spm_id_from=333.1387.upload.video_card.click&vd_source=9c3224b88b8a3c4cc210fc6ff9b28f63',
+
     # 番剧/电影（需要中国大陆 IP）
     # 'https://www.bilibili.com/bangumi/play/ss39429',      # 电影
     # 'https://www.bilibili.com/bangumi/play/ep271002',     # 番剧单集（暂不支持）

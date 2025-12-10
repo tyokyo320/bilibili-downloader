@@ -23,6 +23,9 @@ class BFacade():
         video = await self.crawler.get(url)
         print(f"\n{'=' * 60}")
         print(f"📹 {video.title}")
+        print(f"📺 清晰度：{video.get_quality_name()}")
+        if video.is_durl:
+            print(f"📌 durl 格式（音视频已合并）")
         print(f"{'=' * 60}")
         await self.downloader.download_video(video)
         self.merger.merge_video(video)
@@ -31,10 +34,17 @@ class BFacade():
         async with self._lock:
             self.downloaded_videos.append(video)
 
-    async def download(self, urls):
-        """并发下载所有视频"""
+    async def download(self, urls, max_concurrent: int = 2):
+        """并发下载所有视频（限制并发数）"""
+        # 使用信号量限制并发数，避免同时请求太多导致超时
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def download_with_limit(url):
+            async with semaphore:
+                await self.download_single(url)
+
         # 创建所有下载任务
-        tasks = [self.download_single(url) for url in urls]
+        tasks = [download_with_limit(url) for url in urls]
         # 并发执行所有任务
         await asyncio.gather(*tasks)
 

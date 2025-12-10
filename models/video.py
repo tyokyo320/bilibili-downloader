@@ -9,6 +9,8 @@ class Video():
         self.category = category
         # 从 URL 中提取分P参数（如果存在）
         self.part_number = self._extract_part_number(url)
+        # 是否为 durl 格式（音视频合并在一起，无需单独合并）
+        self.is_durl = False
 
     def _extract_part_number(self, url: str) -> int:
         """从URL中提取分P参数，如果不存在则返回1"""
@@ -39,7 +41,10 @@ class Video():
             16: '流畅 360P',
         }
         self.quality_id = id
-        print(f'📺 清晰度：{self.quality[id]}')
+
+    def get_quality_name(self) -> str:
+        """获取清晰度名称"""
+        return self.quality.get(self.quality_id, f"未知 (ID={self.quality_id})")
 
     def set_video_url(self, video_url: str) -> None:
         self.video_url = video_url
