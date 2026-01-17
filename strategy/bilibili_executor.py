@@ -109,7 +109,13 @@ class BilibiliDownloader():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46',
         }
 
-    async def download_video(self, video) -> None:
+    async def download_video(self, video) -> bool:
+        """
+        下载视频
+
+        Returns:
+            bool: 下载成功返回 True，失败返回 False
+        """
         # 为当前视频分配一个编号
         async with self._counter_lock:
             self._video_counter += 1
@@ -143,14 +149,18 @@ class BilibiliDownloader():
                 print(f"{'─' * 60}")
 
             async with httpx.AsyncClient() as client:
-                await self._download(
+                success = await self._download(
                     client, video_url,
                     os.path.join(self.temp_path, video_filename),
                     f"[{video_num}] 🎬 {part_label}".strip()
                 )
 
             async with self._print_lock:
-                print(f"\n[{video_num}] ✅ 下载完成")
+                if success:
+                    print(f"\n[{video_num}] ✅ 下载完成")
+                else:
+                    print(f"\n[{video_num}] ❌ 下载失败")
+            return success
         else:
             # dash 格式：并发下载视频和音频
             async with self._print_lock:
@@ -172,12 +182,24 @@ class BilibiliDownloader():
                 )
 
                 # 并发下载视频和音频
-                await asyncio.gather(video_task, audio_task)
+                results = await asyncio.gather(video_task, audio_task)
 
+            # 只有视频和音频都下载成功才算成功
+            success = all(results)
             async with self._print_lock:
-                print(f"\n[{video_num}] ✅ 下载完成")
+                if success:
+                    print(f"\n[{video_num}] ✅ 下载完成")
+                else:
+                    print(f"\n[{video_num}] ❌ 下载失败")
+            return success
 
-    async def _download(self, client: httpx.AsyncClient, url, filename, file_type="文件", max_retries=3, retry_delay=5) -> None:
+    async def _download(self, client: httpx.AsyncClient, url, filename, file_type="文件", max_retries=5, retry_delay=5) -> bool:
+        """
+        下载文件
+
+        Returns:
+            bool: 下载成功返回 True，失败返回 False
+        """
         retries = 0
 
         while retries < max_retries:
@@ -195,7 +217,7 @@ class BilibiliDownloader():
                 async with client.stream("GET", url, headers=headers) as response:
                     if response.status_code == 416:
                         print(f"  {file_type} 已经下载完毕")
-                        return
+                        return True
 
                     # 总的文件大小包括已下载的部分
                     total_size = (
@@ -230,7 +252,7 @@ class BilibiliDownloader():
                 # 下载成功后关闭进度条
                 if progress_bar is not None:
                     progress_bar.close()
-                return
+                return True
             except (httpx.RemoteProtocolError, httpx.RequestError) as e:
                 retries += 1
                 # 出错时必须关闭进度条，避免重复显示
@@ -241,6 +263,7 @@ class BilibiliDownloader():
                 await asyncio.sleep(retry_delay)
 
         print(f"  ❌ {file_type} 下载失败，已达到最大重试次数")
+        return False
 
 
 class VideoMerge():
