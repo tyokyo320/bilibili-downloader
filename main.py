@@ -15,19 +15,28 @@ class BFacade():
         self.crawler = BilibiliExecutor()
         self.downloader = BilibiliDownloader()
         self.merger = VideoMerge()
-        self.downloaded_videos = []
+        self.downloaded_videos = []  # 成功下载的视频
+        self.failed_videos = []  # 下载失败的视频 (video, url)
         self._lock = asyncio.Lock()
 
     async def download_single(self, url):
         """下载单个视频"""
         video = await self.crawler.get(url)
-        # 视频信息将在下载时显示，这里不再重复输出
-        await self.downloader.download_video(video)
-        self.merger.merge_video(video)
+        # 保存原始 URL 到 video 对象，便于失败时输出
+        video.source_url = url
 
-        # 使用锁保护共享资源
-        async with self._lock:
-            self.downloaded_videos.append(video)
+        # 视频信息将在下载时显示，这里不再重复输出
+        success = await self.downloader.download_video(video)
+
+        if success:
+            # 下载成功才合并
+            self.merger.merge_video(video)
+            async with self._lock:
+                self.downloaded_videos.append(video)
+        else:
+            # 下载失败，记录到失败列表
+            async with self._lock:
+                self.failed_videos.append(video)
 
     async def download(self, urls, max_concurrent: int = 2):
         """并发下载所有视频（限制并发数）"""
@@ -81,7 +90,9 @@ async def async_main():
     print(f"\n{'=' * 60}")
     print("📊 下载摘要")
     print(f"{'=' * 60}")
-    print(f"✅ 成功下载 {len(b.downloaded_videos)} 个视频")
+    print(f"✅ 成功: {len(b.downloaded_videos)} 个视频")
+    if b.failed_videos:
+        print(f"❌ 失败: {len(b.failed_videos)} 个视频")
     print(f"⏱️  总计用时：{minutes}分钟{seconds}秒")
 
     if b.downloaded_videos:
@@ -89,6 +100,30 @@ async def async_main():
         for i, video in enumerate(b.downloaded_videos, 1):
             quality_name = video.quality.get(video.quality_id, f"未知 (ID={video.quality_id})")
             print(f"  {i}. {video.title} ({quality_name})")
+
+    # 显示失败的视频及其 URL，便于用户重试
+    if b.failed_videos:
+        print(f"\n{'─' * 60}")
+        print("❌ 下载失败的视频：")
+        print("─" * 60)
+        for i, video in enumerate(b.failed_videos, 1):
+            # 显示视频标题
+            if hasattr(video, 'part_number') and video.part_number >= 1:
+                print(f"  {i}. {video.title}_P{video.part_number}")
+            else:
+                print(f"  {i}. {video.title}")
+            # 显示原始 URL，便于用户复制重试
+            if hasattr(video, 'source_url'):
+                print(f"     URL: {video.source_url}")
+
+        # 导出失败的 URL 到文件
+        failed_urls_file = os.path.join(config.BASE_PATH, "failed_urls.txt")
+        with open(failed_urls_file, "w", encoding="utf-8") as f:
+            f.write("# 下载失败的视频 URL，可复制到 config.py 中的 URL 列表重试\n")
+            for video in b.failed_videos:
+                if hasattr(video, 'source_url'):
+                    f.write(f"'{video.source_url}',\n")
+        print(f"\n💡 失败的 URL 已保存到: {failed_urls_file}")
 
     print(f"\n💾 视频保存位置：{config.OUTPUT_PATH}")
     print(f"{'=' * 60}\n")
